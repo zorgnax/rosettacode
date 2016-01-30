@@ -11,10 +11,11 @@ typedef struct {
     edge_t **edge;
     int edge_len;
     int edge_size;
-
     int dist;
     int prev;
     int visited;
+    int vindex;
+    int hindex;
 } vertex_t;
 
 typedef struct {
@@ -23,29 +24,36 @@ typedef struct {
     int vertex_size;
 } graph_t;
 
-void add_edge (graph_t *g, int a, int b, int w) {
-    a = a - 'a';
-    b = b - 'a';
-    int max = a > b ? a : b;
-    if (g->vertex_size < max + 1) {
-        int size = g->vertex_size * 2 > max ? g->vertex_size * 2 : max + 10;
+typedef struct {
+    vertex_t **vertex;
+    int len;
+    int size;
+} heap_t;
+
+void add_vertex (graph_t *g, int i) {
+    if (g->vertex_size < i + 1) {
+        int size = g->vertex_size * 2 > i ? g->vertex_size * 2 : i + 4;
         g->vertex = realloc(g->vertex, size * sizeof (vertex_t *));
-        for (int i = g->vertex_size; i < size; i++) {
-            g->vertex[i] = NULL;
+        for (int j = g->vertex_size; j < size; j++) {
+            g->vertex[j] = NULL;
         }
         g->vertex_size = size;
     }
-    if (!g->vertex[a]) {
-        g->vertex[a] = calloc(1, sizeof (vertex_t));
+    if (!g->vertex[i]) {
+        g->vertex[i] = calloc(1, sizeof (vertex_t));
+        g->vertex[i]->vindex = i;
         g->vertex_len++;
     }
-    if (!g->vertex[b]) {
-        g->vertex[b] = calloc(1, sizeof (vertex_t));
-        g->vertex_len++;
-    }
+}
+
+void add_edge (graph_t *g, int a, int b, int w) {
+    a = a - 'a';
+    b = b - 'a';
+    add_vertex(g, a);
+    add_vertex(g, b);
     vertex_t *v = g->vertex[a];
     if (v->edge_len >= v->edge_size) {
-        v->edge_size = v->edge_size * 2 + 1;
+        v->edge_size = v->edge_size ? v->edge_size * 2 : 4;
         v->edge = realloc(v->edge, v->edge_size * sizeof (edge_t *));
     }
     edge_t *e = calloc(1, sizeof (edge_t));
@@ -54,52 +62,85 @@ void add_edge (graph_t *g, int a, int b, int w) {
     v->edge[v->edge_len++] = e;
 }
 
-void print_graph (graph_t *g) {
-    int i, j, k;
-    for (i = 0, j = 0; j < g->vertex_len; i++) {
-        vertex_t *v = g->vertex[i];
-        if (!v)
-            continue;
-        j++;
-        for (k = 0; k < v->edge_len; k++) {
-            edge_t *e = v->edge[k];
-            printf("%c-[%d]->%c\n", 'a' + i, e->weight, 'a' + e->vertex);
-        }
+void push_heap (heap_t *h, vertex_t *v) {
+    int i, j;
+    if (v->hindex) {
+        i = v->hindex;
     }
+    else {
+        if (h->len + 1 >= h->size) {
+            h->size = h->size ? h->size * 2 : 4;
+            h->vertex = realloc(h->vertex, h->size * sizeof (vertex_t *));
+        }
+        h->len++;
+        i = h->len;
+    }
+    j = i / 2;
+    while (i > 1 && h->vertex[j]->dist > v->dist) {
+        h->vertex[i] = h->vertex[j];
+        h->vertex[i]->hindex = i;
+        i = j;
+        j = j / 2;
+    }
+    h->vertex[i] = v;
+    v->hindex = i;
+}
+
+vertex_t *pop_heap (heap_t *h) {
+    if (!h->len) {
+        return NULL;
+    }
+    vertex_t *v = h->vertex[1];
+    h->vertex[1] = h->vertex[h->len];
+    h->len--;
+    int i = 1;
+    while (1) {
+        int k = i;
+        int j = 2 * i;
+        if (j <= h->len && h->vertex[j]->dist < h->vertex[k]->dist) {
+            k = j;
+        }
+        if (j + 1 <= h->len && h->vertex[j + 1]->dist < h->vertex[k]->dist) {
+            k = j + 1;
+        }
+        if (k == i) {
+            break;
+        }
+        h->vertex[i] = h->vertex[k];
+        h->vertex[i]->hindex = i;
+        i = k;
+    }
+    h->vertex[i] = h->vertex[h->len + 1];
+    h->vertex[i]->hindex = i;
+    return v;
 }
 
 void dijkstra (graph_t *g, int a, int b) {
     int i, j;
-    vertex_t *v, *u;
-    edge_t *e;
     a = a - 'a';
     b = b - 'a';
     for (i = 0; i < g->vertex_len; i++) {
-        v = g->vertex[i];
+        vertex_t *v = g->vertex[i];
         v->dist = INT_MAX;
         v->prev = 0;
         v->visited = 0;
     }
-    i = a;
-    v = g->vertex[a];
-    v->dist = 0;
-    while (v) {
-        if (i == b)
+    g->vertex[a]->dist = 0;
+    heap_t *h = calloc(1, sizeof (heap_t));
+    push_heap(h, g->vertex[a]);
+    while (1) {
+        vertex_t *v = pop_heap(h);
+        if (!v || v->vindex == b) {
             break;
+        }
         v->visited = 1;
         for (j = 0; j < v->edge_len; j++) {
-            e = v->edge[j];
-            u = g->vertex[e->vertex];
-            if (v->dist + e->weight <= u->dist) {
-                u->prev = i;
+            edge_t *e = v->edge[j];
+            vertex_t *u = g->vertex[e->vertex];
+            if (!u->visited && v->dist + e->weight <= u->dist) {
+                u->prev = v->vindex;
                 u->dist = v->dist + e->weight;
-            }
-        }
-        for (j = 0, v = NULL; j < g->vertex_len; j++) {
-            u = g->vertex[j];
-            if (!u->visited && (!v || u->dist <= v->dist)) {
-                v = u;
-                i = j;
+                push_heap(h, u);
             }
         }
     }
@@ -135,7 +176,6 @@ int main () {
     add_edge(g, 'c', 'f', 2);
     add_edge(g, 'd', 'e', 6);
     add_edge(g, 'e', 'f', 9);
-    print_graph(g);
     dijkstra(g, 'a', 'e');
     print_path(g, 'e', 0);
     return 0;
