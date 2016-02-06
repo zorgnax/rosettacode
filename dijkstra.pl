@@ -9,8 +9,18 @@ sub add_edge {
 
 sub push_priority {
     my ($a, $v) = @_;
-    push @$a, $v;
-    @$a = sort @$a;
+    my $i = 0;
+    my $j = $#a;
+    while ($i <= $j) {
+        my $k = int(($i + $j) / 2);
+        if ($a[$k] >= $v) {
+            $j = $k - 1;
+        }
+        else {
+            $i = $k + 1;
+        }
+    }
+    splice @$a, $i, 0, $v;
 }
 
 sub dijkstra {
