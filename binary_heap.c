@@ -17,6 +17,7 @@ void push (heap_t *h, int priority, char *data) {
         h->size = h->size ? h->size * 2 : 4;
         h->nodes = realloc(h->nodes, h->size * sizeof (node_t));
     }
+    // upheap
     int i = h->len + 1;
     int j = i / 2;
     while (i > 1 && h->nodes[j].priority > priority) {
@@ -29,29 +30,34 @@ void push (heap_t *h, int priority, char *data) {
     h->len++;
 }
 
+int min (heap_t *h, int a, int b, int c) {
+    int m = a;
+    if (b <= h->len && h->nodes[b].priority < h->nodes[m].priority) {
+        m = b;
+    }
+    if (c <= h->len && h->nodes[c].priority < h->nodes[m].priority) {
+        m = c;
+    }
+    return m;
+}
+
 char *pop (heap_t *h) {
-    int i, j, k;
+    int i, j;
     if (!h->len) {
         return NULL;
     }
+    // downheap
     char *data = h->nodes[1].data;
     h->nodes[1] = h->nodes[h->len];
     h->len--;
     i = 1;
     while (1) {
-        k = i;
-        j = 2 * i;
-        if (j <= h->len && h->nodes[j].priority < h->nodes[k].priority) {
-            k = j;
-        }
-        if (j + 1 <= h->len && h->nodes[j + 1].priority < h->nodes[k].priority) {
-            k = j + 1;
-        }
-        if (k == i) {
+        j = min(h, i, 2 * i, 2 * i + 1);
+        if (j == i) {
             break;
         }
-        h->nodes[i] = h->nodes[k];
-        i = k;
+        h->nodes[i] = h->nodes[j];
+        i = j;
     }
     h->nodes[i] = h->nodes[h->len + 1];
     return data;
