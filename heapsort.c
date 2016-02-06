@@ -11,7 +11,7 @@ int max (int *a, int n, int i, int j, int k) {
     return m;
 }
 
-void downheap (int *a, int n, int i) {
+void down_heap (int *a, int n, int i) {
     while (1) {
         int j = max(a, n, i, 2 * i + 1, 2 * i + 2);
         if (j == i) {
@@ -24,16 +24,16 @@ void downheap (int *a, int n, int i) {
     }
 }
 
-void heapsort (int *a, int n) {
+void heap_sort (int *a, int n) {
     int i;
     for (i = (n - 2) / 2; i >= 0; i--) {
-        downheap(a, n, i);
+        down_heap(a, n, i);
     }
     for (i = 0; i < n; i++) {
         int t = a[n - i - 1];
         a[n - i - 1] = a[0];
         a[0] = t;
-        downheap(a, n - i - 1, 0);
+        down_heap(a, n - i - 1, 0);
     }
 }
 
@@ -43,7 +43,7 @@ int main () {
     int i;
     for (i = 0; i < n; i++)
         printf("%d%s", a[i], i == n - 1 ? "\n" : " ");
-    heapsort(a, n);
+    heap_sort(a, n);
     for (i = 0; i < n; i++)
         printf("%d%s", a[i], i == n - 1 ? "\n" : " ");
     return 0;
