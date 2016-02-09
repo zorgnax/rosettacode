@@ -60,32 +60,30 @@ int symbol_index (turing_t *t, char symbol) {
 }
 
 void move (turing_t *t, int dir) {
-    if (dir == STAY)
-        return;
-    tape_t *old = t->tape;
+    tape_t *orig = t->tape;
     if (dir == RIGHT) {
-        if (old && old->right) {
-            t->tape = old->right;
+        if (orig && orig->right) {
+            t->tape = orig->right;
         }
         else {
             t->tape = calloc(1, sizeof (tape_t));
             t->tape->symbol = t->blank;
-            t->tape->left = old;
-            if (old) {
-                old->right = t->tape;
+            if (orig) {
+                t->tape->left = orig;
+                orig->right = t->tape;
             }
         }
     }
-    if (dir == LEFT) {
-        if (old && old->left) {
-            t->tape = old->left;
+    else if (dir == LEFT) {
+        if (orig && orig->left) {
+            t->tape = orig->left;
         }
         else {
             t->tape = calloc(1, sizeof (tape_t));
             t->tape->symbol = t->blank;
-            t->tape->right = old;
-            if (old) {
-                old->left = t->tape;
+            if (orig) {
+                t->tape->right = orig;
+                orig->left = t->tape;
             }
         }
     }
