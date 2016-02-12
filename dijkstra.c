@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
-#include <stdarg.h>
 
 typedef struct {
     int vertex;
@@ -12,7 +11,6 @@ typedef struct {
     edge_t **edges;
     int edges_len;
     int edges_size;
-    int hindex;
     int dist;
     int prev;
     int visited;
@@ -25,7 +23,9 @@ typedef struct {
 } graph_t;
 
 typedef struct {
-    int *vertices;
+    int *data;
+    int *prio;
+    int *index;
     int len;
     int size;
 } heap_t;
@@ -34,9 +34,8 @@ void add_vertex (graph_t *g, int i) {
     if (g->vertices_size < i + 1) {
         int size = g->vertices_size * 2 > i ? g->vertices_size * 2 : i + 4;
         g->vertices = realloc(g->vertices, size * sizeof (vertex_t *));
-        for (int j = g->vertices_size; j < size; j++) {
+        for (int j = g->vertices_size; j < size; j++)
             g->vertices[j] = NULL;
-        }
         g->vertices_size = size;
     }
     if (!g->vertices[i]) {
@@ -61,75 +60,60 @@ void add_edge (graph_t *g, int a, int b, int w) {
     v->edges[v->edges_len++] = e;
 }
 
-void up_heap (heap_t *h, graph_t *g, int i) {
-    vertex_t *v = g->vertices[i];
-    int j = v->hindex;
-    int k = j / 2;
-    while (j > 1) {
-        vertex_t *u = g->vertices[h->vertices[k]];
-        if (u->dist < v->dist)
-            break;
-        h->vertices[j] = h->vertices[k];
-        u->hindex = j;
-        j = k;
-        k = k / 2;
-    }
-    h->vertices[j] = i;
-    v->hindex = j;
+heap_t *create_heap (int n) {
+    heap_t *h = calloc(1, sizeof (heap_t));
+    h->data = calloc(n + 1, sizeof (int));
+    h->prio = calloc(n + 1, sizeof (int));
+    h->index = calloc(n, sizeof (int));
+    return h;
 }
 
-void push_heap (heap_t *h, graph_t *g, int i) {
-    vertex_t *v = g->vertices[i];
-    if (!v->hindex) {
-        if (h->len + 1 >= h->size) {
-            h->size = h->size ? h->size * 2 : 4;
-            h->vertices = realloc(h->vertices, h->size * sizeof (int));
-        }
-        h->len++;
-        v->hindex = h->len;
+void push_heap (heap_t *h, int v, int p) {
+    int i = h->index[v] || ++h->len;
+    int j = i / 2;
+    while (i > 1) {
+        if (h->prio[j] < p)
+            break;
+        h->data[i] = h->data[j];
+        h->prio[i] = h->prio[j];
+        h->index[h->data[i]] = i;
+        i = j;
+        j = j / 2;
     }
-    up_heap(h, g, i);
+    h->data[i] = v;
+    h->prio[i] = p;
+    h->index[v] = i;
 }
 
-int min (heap_t *h, graph_t *g, int n, ...) {
-    va_list args;
-    va_start(args, n);
-    int m = va_arg(args, int);
-    int i, j;
-    for (i = 0; i < n - 1; i++) {
-        j = va_arg(args, int);
-        if (j > h->len)
-            break;
-        vertex_t *v = g->vertices[h->vertices[m]];
-        vertex_t *u = g->vertices[h->vertices[j]];
-        if (u->dist < v->dist)
-            m = j;
-    }
-    va_end(args);
+int min (heap_t *h, int i, int j, int k) {
+    int m = i;
+    if (j <= h->len && h->prio[j] < h->prio[m])
+        m = j;
+    if (k <= h->len && h->prio[k] < h->prio[m])
+        m = k;
     return m;
 }
 
-void down_heap (heap_t *h, graph_t *g) {
-    int k = h->vertices[1];
+int pop_heap (heap_t *h) {
+    int v = h->data[1];
+    h->data[1] = h->data[h->len];
+    h->prio[1] = h->prio[h->len];
+    h->index[h->data[1]] = 1;
+    h->len--;
     int i = 1;
     while (1) {
-        int j = min(h, g, 3, i, 2 * i, 2 * i + 1);
+        int j = min(h, i, 2 * i, 2 * i + 1);
         if (j == i)
             break;
-        h->vertices[i] = h->vertices[j];
-        g->vertices[h->vertices[i]]->hindex = i;
+        h->data[i] = h->data[j];
+        h->prio[i] = h->prio[j];
+        h->index[h->data[i]] = i;
         i = j;
     }
-    h->vertices[i] = k;
-    g->vertices[k]->hindex = i;
-}
-
-int pop_heap (heap_t *h, graph_t *g) {
-    int i = h->vertices[1];
-    h->vertices[1] = h->vertices[h->len];
-    h->len--;
-    down_heap(h, g);
-    return i;
+    h->data[i] = h->data[h->len + 1];
+    h->prio[i] = h->prio[h->len + 1];
+    h->index[h->data[i]] = i;
+    return v;
 }
 
 void dijkstra (graph_t *g, int a, int b) {
@@ -144,10 +128,10 @@ void dijkstra (graph_t *g, int a, int b) {
     }
     vertex_t *v = g->vertices[a];
     v->dist = 0;
-    heap_t *h = calloc(1, sizeof (heap_t));
-    push_heap(h, g, a);
+    heap_t *h = create_heap(g->vertices_len);
+    push_heap(h, a, v->dist);
     while (h->len) {
-        i = pop_heap(h, g);
+        i = pop_heap(h);
         if (i == b)
             break;
         v = g->vertices[i];
@@ -158,30 +142,28 @@ void dijkstra (graph_t *g, int a, int b) {
             if (!u->visited && v->dist + e->weight <= u->dist) {
                 u->prev = i;
                 u->dist = v->dist + e->weight;
-                push_heap(h, g, e->vertex);
+                push_heap(h, e->vertex, u->dist);
             }
         }
     }
 }
 
 void print_path (graph_t *g, int i) {
+    int n, j;
+    vertex_t *v, *u;
     i = i - 'a';
-    vertex_t *v = g->vertices[i], *u = v;
+    v = g->vertices[i];
     if (v->dist == INT_MAX) {
         printf("no path\n");
         return;
     }
-    int j = 1, k;
-    while (u->dist) {
-        u = g->vertices[u->prev];
-        j++;
-    }
-    char *a = malloc(j);
-    a[j - 1] = 'a' + i;
-    for (k = 0, u = v; k < j - 1; k++, u = g->vertices[u->prev]) {
-        a[j - k - 2] = 'a' + u->prev;
-    }
-    printf("%d %.*s\n", v->dist, j, a);
+    for (n = 1, u = v; u->dist; u = g->vertices[u->prev], n++)
+        ;
+    char *path = malloc(n);
+    path[n - 1] = 'a' + i;
+    for (j = 0, u = v; u->dist; u = g->vertices[u->prev], j++)
+        path[n - j - 2] = 'a' + u->prev;
+    printf("%d %.*s\n", v->dist, n, path);
 }
 
 int main () {
