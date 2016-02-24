@@ -32,7 +32,9 @@ item_t items[] = {
     {"book",                    30,    10},
 };
 
-int *knapsack (item_t *items, int n, int w) {
+int n = sizeof (items) / sizeof (item_t);
+
+int *knapsack (int w) {
     int i, j, a, b, *mm, **m, *s;
     mm = calloc((n + 1) * (w + 1), sizeof (int));
     m = malloc((n + 1) * sizeof (int *));
@@ -63,9 +65,8 @@ int *knapsack (item_t *items, int n, int w) {
 }
 
 int main () {
-    int i, n, tw = 0, tv = 0, *s;
-    n = sizeof (items) / sizeof (item_t);
-    s = knapsack(items, n, 400);
+    int i, tw = 0, tv = 0, *s;
+    s = knapsack(400);
     for (i = 0; i < n; i++) {
         if (s[i]) {
             printf("%-22s %5d %5d\n", items[i].name, items[i].weight, items[i].value);
