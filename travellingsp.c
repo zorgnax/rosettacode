@@ -38,7 +38,7 @@ int *best;
 int best_dist = 0;
 
 void travellingsp (int i, int dist) {
-    int j, k;
+    int j;
     if (i == n) {
         dist += graph[path[i - 1]][0];
         if (!best_dist || best_dist > dist) {
