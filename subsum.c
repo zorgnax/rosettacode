@@ -41,25 +41,25 @@ item_t items[] = {
 };
 
 int n = sizeof (items) / sizeof (item_t);
-int *path;
+int *set;
 
 void subsum (int i, int weight) {
     int j;
     if (i && !weight) {
         for (j = 0; j < i; j++) {
-            item_t item = items[path[j]];
-            printf("%s%s", j ? " " : "", items[path[j]].word);
+            item_t item = items[set[j]];
+            printf("%s%s", j ? " " : "", items[set[j]].word);
         }
         printf("\n");
     }
-    for (j = i ? path[i - 1] + 1: 0; j < n; j++) {
-        path[i] = j;
+    for (j = i ? set[i - 1] + 1: 0; j < n; j++) {
+        set[i] = j;
         subsum(i + 1, weight + items[j].weight);
     }
 }
 
 int main () {
-    path = malloc(n * sizeof (int));
+    set = malloc(n * sizeof (int));
     subsum(0, 0);
     return 0;
 }
