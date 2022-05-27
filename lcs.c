@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+// longest common subsequence
+
 #define MAX(a, b) (a > b ? a : b)
 
 int lcs (char *a, int n, char *b, int m, char **s) {

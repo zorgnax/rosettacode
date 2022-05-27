@@ -1,5 +1,7 @@
 #!/usr/bin/perl
 
+# longest common subsequence
+
 sub lcs {
     my ($a, $b) = @_;
     if (!length($a) || !length($b)) {
