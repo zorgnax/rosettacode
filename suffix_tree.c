@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 // Based on this article: https://www.cise.ufl.edu/~sahni/dsaaj/enrich/c16/suffix.htm
 //
@@ -18,14 +19,8 @@ struct node_t {
     node_t *next;
 };
 
-// char S[] = "ababbabbaabbabb";
-// char S[] = "the quick brown fox jumps over the lazy dog.";
-// char S[] = "zuzzy zazz";
-// char S[] = "peeper";
-// char S[] = "ababab";
-// char S[] = "aaaaaa";
-char S[] = "abbabbbbaaaa";
-int n = sizeof(S) - 1;
+char *S;
+int n;
 
 // Each node in the tree stores a reference to the first child, then each child
 // stores a reference to their next sibling
@@ -42,12 +37,17 @@ void add_child (node_t *parent, node_t *child) {
     }
 }
 
-void print_tree (node_t *node, int depth) {
+void print_tree (node_t *node, int depth, int highlight) {
     for (int i = 0; i < depth; i++) {
         printf("    ");
     }
     if (!node->child) {
-        printf("\e[1;32m");
+        if (node->suffix == highlight) {
+            printf("\e[1;36m");
+        }
+        else {
+            printf("\e[1;32m");
+        }
     }
     int len = node->index2 - node->index1;
     printf("%.*s", len, S + node->index1);
@@ -56,7 +56,7 @@ void print_tree (node_t *node, int depth) {
         printf("\e[0m");
     }
     for (node_t *child = node->child; child; child = child->next) {
-        print_tree(child, depth + 1);
+        print_tree(child, depth + 1, highlight);
     }
     if (depth == 0) {
         printf("\n");
@@ -99,6 +99,19 @@ int find_mismatched_node (node_t *node, int index, node_t **mismatched, node_t *
 
 int main (int argc, char **argv) {
     printf("hello world!\n");
+
+    S = "ababbabbaabbabb";
+    S = "the quick brown fox jumps over the lazy dog.";
+    S = "zuzzy zazz";
+    S = "peeper";
+    S = "ababab";
+    S = "aaaaaa";
+    S = "abcab";
+    if (argc > 1) {
+        S = argv[1];
+    }
+    n = strlen(S);
+
     printf("S is %s n is %d\n", S, n);
 
     node_t *node;
@@ -107,11 +120,10 @@ int main (int argc, char **argv) {
     root->index2 = 0;
 
     for (int index = 0; index < n; index++) {
-        printf("suffix %d is %.*s\n", index, n - index, S + index);
+        printf("suffix %d is %.*s\e[1;36m%.*s\e[0m\n", index, index, S, n - index, S + index);
 
         node_t *mismatched, *parent;
         int offset = find_mismatched_node(root, index, &mismatched, &parent);
-        printf("offset is %d\n", offset);
 
         node_t *new_node = calloc(1, sizeof(node_t));
         new_node->index1 = mismatched->index1 + offset - mismatched->suffix + index;
@@ -145,7 +157,7 @@ int main (int argc, char **argv) {
             add_child(mismatched, new_node);
         }
 
-        print_tree(root, 0);
+        print_tree(root, 0, index);
     }
     return 0;
 }
